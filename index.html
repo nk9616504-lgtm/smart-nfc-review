@@ -4,11 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart NFC & QR Admin Panel</title>
+    <!-- QR Code Generator Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 10px; color: #333; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #1a73e8; font-size: 20px; margin-bottom: 5px; }
         p.sub { text-align: center; color: #666; font-size: 12px; margin-bottom: 15px; }
+        
+        /* Login Screen */
+        #login-screen { text-align: center; padding: 40px 20px; }
+        #login-screen input { width: 200px; padding: 10px; font-size: 18px; text-align: center; border: 2px solid #1a73e8; border-radius: 6px; margin-bottom: 15px; letter-spacing: 3px; }
+        #login-screen button { background: #1a73e8; color: white; padding: 10px 25px; font-size: 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+        
+        /* Redirect Screen */
+        #redirect-screen { display: none; text-align: center; padding: 60px 20px; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #1a73e8; border-radius: 50%; width: 35px; height: 35px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Admin Cards */
+        #admin-panel { display: none; }
         .card-box { background: #fafafa; border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: bold; }
         .badge-active { background: #e6f4ea; color: #137333; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
@@ -21,30 +37,125 @@
         .btn-nfc { background: #5f6368; color: white; }
         .btn-share { background: #008069; color: white; }
         .btn-clear { background: #d93025; color: white; }
+        .qrcode-container { display: none; text-align: center; margin-top: 10px; padding: 10px; background: white; border: 1px dashed #ccc; }
+        .qrcode-container img, .qrcode-container canvas { margin: 0 auto; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Smart NFC & QR Admin Panel</h2>
-    <p class="sub">Spot Link Editor & Management</p>
+    <!-- 1. Customer Redirect Screen -->
+    <div id="redirect-screen">
+        <div class="loader"></div>
+        <h3 id="redirect-msg">Google Review பக்கத்திற்கு அழைத்துச் செல்லப்படுகிறது...</h3>
+    </div>
 
-    <div id="cards-container"></div>
+    <!-- 2. Admin Login Screen -->
+    <div id="login-screen" style="display: none;">
+        <h2>🔒 Admin Login</h2>
+        <p class="sub">தொடர அட்மின் பாஸ்வேர்டை உள்ளிடவும்</p>
+        <input type="password" id="admin-pass" placeholder="****" maxlength="10"><br>
+        <button onclick="checkPassword()">Login</button>
+    </div>
+
+    <!-- 3. Admin Panel Dashboard -->
+    <div id="admin-panel">
+        <h2>Smart NFC & QR Admin Panel</h2>
+        <p class="sub">Spot Link Editor & Cloud Management</p>
+        <div id="cards-container"></div>
+    </div>
 </div>
 
-<script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // ⚠️ உங்கள் Firebase விவரங்களை இங்கே வைக்கவும்
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const ADMIN_PASSWORD = "4097";
     const totalCards = 10;
     const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '#card';
 
-    function renderCards() {
-        let container = document.getElementById('cards-container');
-        let html = '';
+    async function initApp() {
+        const hash = window.location.hash;
 
+        if (hash && hash.startsWith('#card')) {
+            document.getElementById('redirect-screen').style.display = 'block';
+            const cardId = hash.replace('#', '');
+
+            try {
+                const docSnap = await getDoc(doc(db, "nfc_cards", cardId));
+                if (docSnap.exists() && docSnap.data().link) {
+                    let targetUrl = docSnap.data().link.trim();
+                    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                        targetUrl = 'https://' + targetUrl;
+                    }
+                    window.location.replace(targetUrl);
+                } else {
+                    document.querySelector('.loader').style.display = 'none';
+                    document.getElementById('redirect-msg').innerText = "இந்த கார்டு இன்னும் ஆக்டிவேட் செய்யப்படவில்லை (Card Not Activated).";
+                }
+            } catch (error) {
+                document.querySelector('.loader').style.display = 'none';
+                document.getElementById('redirect-msg').innerText = "இணைப்பில் பிழை ஏற்பட்டுள்ளது. மீண்டும் முயற்சிக்கவும்.";
+            }
+        } else {
+            if (sessionStorage.getItem('nfc_admin_logged') === 'true') {
+                showAdminPanel();
+            } else {
+                document.getElementById('login-screen').style.display = 'block';
+            }
+        }
+    }
+
+    window.checkPassword = function() {
+        const inputPass = document.getElementById('admin-pass').value;
+        if (inputPass === ADMIN_PASSWORD) {
+            sessionStorage.setItem('nfc_admin_logged', 'true');
+            document.getElementById('login-screen').style.display = 'none';
+            showAdminPanel();
+        } else {
+            alert('தவறான பாஸ்வேர்டு! மீண்டும் முயற்சிக்கவும்.');
+            document.getElementById('admin-pass').value = '';
+        }
+    }
+
+    async function showAdminPanel() {
+        document.getElementById('admin-panel').style.display = 'block';
+        await renderCards();
+    }
+
+    window.renderCards = async function() {
+        let container = document.getElementById('cards-container');
+        container.innerHTML = '<p style="text-align:center;">டேட்டா லோட் ஆகிறது...</p>';
+
+        let firestoreData = {};
+        try {
+            let querySnapshot = await getDocs(collection(db, "nfc_cards"));
+            querySnapshot.forEach((doc) => {
+                firestoreData[doc.id] = doc.data();
+            });
+        } catch (e) {
+            container.innerHTML = '<p style="color:red; text-align:center;">Firebase இணைப்பதில் சிக்கல். உங்கள் config விவரங்களைச் சரிபார்க்கவும்.</p>';
+            return;
+        }
+
+        let html = '';
         for (let i = 1; i <= totalCards; i++) {
             let cardId = 'card' + String(i).padStart(3, '0');
-            let savedName = localStorage.getItem(cardId + '_name') || '';
-            let savedLink = localStorage.getItem(cardId + '_link') || '';
-            let isActive = savedName !== '' || savedLink !== '';
+            let cardData = firestoreData[cardId] || { name: '', link: '' };
+            let isActive = (cardData.name && cardData.name !== '') || (cardData.link && cardData.link !== '');
 
             html += `
                 <div class="card-box" id="box_${cardId}">
@@ -52,46 +163,54 @@
                         <span>CARD #${String(i).padStart(3, '0')}</span>
                         <span class="${isActive ? 'badge-active' : 'badge-empty'}">${isActive ? 'Active' : 'Empty'}</span>
                     </div>
-                    <input type="text" id="name_${cardId}" placeholder="கடையின் பெயர் (Shop Name)" value="${savedName}">
-                    <input type="text" id="link_${cardId}" placeholder="Google Review Link இங்கே பேஸ்ட் செய்யவும்" value="${savedLink}">
+                    <input type="text" id="name_${cardId}" placeholder="கடையின் பெயர் (Shop Name)" value="${cardData.name || ''}">
+                    <input type="text" id="link_${cardId}" placeholder="Google Review Link இங்கே பேஸ்ட் செய்யவும்" value="${cardData.link || ''}">
                     <div class="btn-group">
                         <button class="btn-save" onclick="saveCard('${cardId}')">💾 Save</button>
-                        <button class="btn-qr" onclick="showQR('${cardId}')">📷 QR</button>
+                        <button class="btn-qr" onclick="toggleQR('${cardId}')">📷 QR</button>
                         <button class="btn-nfc" onclick="copyNfc('${cardId}')">📋 Copy</button>
                         <button class="btn-share" onclick="shareNfc('${cardId}')">📤 NFC Share</button>
                         <button class="btn-clear" onclick="clearCard('${cardId}')">🗑️ Clear</button>
                     </div>
+                    <div id="qrcode_${cardId}" class="qrcode-container"></div>
                 </div>
             `;
         }
         container.innerHTML = html;
     }
 
-    function saveCard(cardId) {
+    window.saveCard = async function(cardId) {
         let name = document.getElementById('name_' + cardId).value;
         let link = document.getElementById('link_' + cardId).value;
-        localStorage.setItem(cardId + '_name', name);
-        localStorage.setItem(cardId + '_link', link);
-        alert('Card ' + cardId + ' சேமிக்கப்பட்டது!');
-        renderCards();
-    }
-
-    function clearCard(cardId) {
-        if(confirm('இந்த கார்டு விவரங்களை அழிக்க விரும்புகிறீர்களா?')) {
-            localStorage.removeItem(cardId + '_name');
-            localStorage.removeItem(cardId + '_link');
+        
+        try {
+            await setDoc(doc(db, "nfc_cards", cardId), { name: name, link: link });
+            alert('Card ' + cardId + ' பாதுகாப்பாகச் சேமிக்கப்பட்டது!');
             renderCards();
+        } catch (e) {
+            alert('சேமிப்பதில் பிழை: ' + e.message);
         }
     }
 
-    function copyNfc(cardId) {
+    window.clearCard = async function(cardId) {
+        if(confirm('இந்த கார்டு விவரங்களை அழிக்க விரும்புகிறீர்களா?')) {
+            try {
+                await setDoc(doc(db, "nfc_cards", cardId), { name: '', link: '' });
+                renderCards();
+            } catch (e) {
+                alert('அழிப்பதில் பிழை: ' + e.message);
+            }
+        }
+    }
+
+    window.copyNfc = function(cardId) {
         let nfcUrl = baseUrl + cardId.replace('card', '');
         navigator.clipboard.writeText(nfcUrl).then(() => {
             alert('NFC லிங்க் காப்பி செய்யப்பட்டது:\n' + nfcUrl);
         });
     }
 
-    function shareNfc(cardId) {
+    window.shareNfc = function(cardId) {
         let nfcUrl = baseUrl + cardId.replace('card', '');
         if (navigator.share) {
             navigator.share({
@@ -102,12 +221,30 @@
         }
     }
 
-    function showQR(cardId) {
+    window.toggleQR = function(cardId) {
+        let qrDiv = document.getElementById('qrcode_' + cardId);
         let nfcUrl = baseUrl + cardId.replace('card', '');
-        alert('QR Link for ' + cardId + ':\n' + nfcUrl);
+        
+        if (qrDiv.style.display === 'block') {
+            qrDiv.style.display = 'none';
+        } else {
+            qrDiv.innerHTML = '';
+            new QRCode(qrDiv, {
+                text: nfcUrl,
+                width: 150,
+                height: 150
+            });
+            qrDiv.style.display = 'block';
+        }
     }
 
-    renderCards();
+    document.getElementById('admin-pass').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            checkPassword();
+        }
+    });
+
+    initApp();
 </script>
 
 </body>

@@ -176,8 +176,7 @@
                 firestoreData[docSnap.id] = docSnap.data();
             });
         } catch (e) {
-            container.innerHTML = '<p style="color:red; text-align:center;">Firebase இணைப்பதில் சிக்கல். உங்கள் கன்சோல் இணைப்பைச் சரிபார்க்கவும்.</p>';
-            return;
+            firestoreData = {};
         }
 
         renderPagination();
@@ -222,7 +221,7 @@
                 <div class="card-box" id="box_${cardId}">
                     <div class="card-header">
                         <span>CARD #${String(i).padStart(3, '0')}</span>
-                        <span class="${isActive ? 'badge-active' : 'badge-empty'}">${isActive ? 'Active' : 'Empty'}</span>
+                        <span id="badge_${cardId}" class="${isActive ? 'badge-active' : 'badge-empty'}">${isActive ? 'Active' : 'Empty'}</span>
                     </div>
                     <input type="text" id="name_${cardId}" placeholder="கடையின் பெயர் (Shop Name)" value="${nameVal}">
                     <input type="text" id="link_${cardId}" placeholder="Google Review Link இங்கே பேஸ்ட் செய்யவும்" value="${linkVal}">
@@ -247,8 +246,18 @@
         try {
             await setDoc(doc(db, "nfc_cards", cardId), { name: nameField, link: linkField }, { merge: true });
             firestoreData[cardId] = { name: nameField, link: linkField };
+            
+            // UI உடனடியாக அப்டேட் ஆகும்
+            let badge = document.querySelector(`#box_${cardId} .card-header span:last-child`);
+            if (nameField !== '' || linkField !== '') {
+                badge.className = 'badge-active';
+                badge.innerText = 'Active';
+            } else {
+                badge.className = 'badge-empty';
+                badge.innerText = 'Empty';
+            }
+
             alert('Card ' + cardId + ' பாதுகாப்பாகச் சேமிக்கப்பட்டது!');
-            renderCards();
         } catch (e) {
             alert('சேமிப்பதில் பிழை: ' + e.message);
         }
@@ -259,7 +268,15 @@
             try {
                 await setDoc(doc(db, "nfc_cards", cardId), { name: '', link: '' }, { merge: true });
                 firestoreData[cardId] = { name: '', link: '' };
-                renderCards();
+                
+                document.getElementById('name_' + cardId).value = '';
+                document.getElementById('link_' + cardId).value = '';
+                
+                let badge = document.querySelector(`#box_${cardId} .card-header span:last-child`);
+                badge.className = 'badge-empty';
+                badge.innerText = 'Empty';
+
+                alert('Card ' + cardId + ' அழிக்கப்பட்டது!');
             } catch (e) {
                 alert('அழிப்பதில் பிழை: ' + e.message);
             }

@@ -95,8 +95,6 @@
         let nfcUrl = baseUrl + cardId.replace('card', '');
         if (navigator.share) {
             navigator.share({
-                title: 'Smart NFC Card - ' + cardId,
-                text: 'Supplier-க்கான NFC URL:',
                 url: nfcUrl,
             }).catch(() => {});
         } else {

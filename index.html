@@ -12,7 +12,7 @@
     header h1 { margin: 0; font-size: 20px; }
     header p { margin: 4px 0 0; font-size: 12px; opacity: 0.85; }
     .container { max-width: 800px; margin: 16px auto; padding: 0 12px; }
-    .search-box { width: 100%; padding: 12px 16px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 16px; margin-bottom: 16px; outline: none; }
+    .search-box { width: 100%; padding: 12px 16px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 16px; margin-bottom: 16px; outline: none; background: white; }
     .search-box:focus { border-color: #2563eb; }
     .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.06); border-left: 5px solid #2563eb; }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -69,4 +69,122 @@
     const TOTAL_CARDS = 500;
     let cardsData = {};
     
-    // Hash-based routing to completely avoid 404 errors on static
+    const hash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    const cardIdParam = urlParams.get('id') || (hash.startsWith('#card') ? hash.replace('#', '') : null);
+
+    if (cardIdParam) {
+      document.getElementById('redirectView').style.display = 'flex';
+      fetch(`${FIREBASE_DB_URL}/cards/${cardIdParam}.json`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.url) {
+            window.location.replace(data.url);
+          } else {
+            document.getElementById('redirectText').innerText = "இந்த கார்டு இன்னும் ஆக்டிவேட் செய்யப்படவில்லை.";
+          }
+        })
+        .catch(() => {
+          document.getElementById('redirectText').innerText = "இணைய இணைப்பைச் சரிபார்க்கவும்.";
+        });
+    } else {
+      document.getElementById('adminView').style.display = 'block';
+      loadAllCards();
+    }
+
+    function loadAllCards() {
+      fetch(`${FIREBASE_DB_URL}/cards.json`)
+        .then(res => res.json())
+        .then(data => {
+          cardsData = data || {};
+          renderCards(1, 50);
+        });
+    }
+
+    function renderCards(start, end, filterText = "") {
+      const container = document.getElementById('cardsList');
+      container.innerHTML = "";
+      const baseUrl = window.location.origin + window.location.pathname;
+
+      for (let i = 1; i <= TOTAL_CARDS; i++) {
+        const idStr = String(i).padStart(3, '0');
+        const cardKey = `card${idStr}`;
+        const info = cardsData[cardKey] || { shop: "", url: "" };
+
+        if (filterText) {
+          const matchId = idStr.includes(filterText) || cardKey.includes(filterText.toLowerCase());
+          const matchShop = info.shop.toLowerCase().includes(filterText.toLowerCase());
+          if (!matchId && !matchShop) continue;
+        } else if (i > end) {
+          break;
+        }
+
+        const cardLink = `${baseUrl}#${cardKey}`;
+        const isActive = info.url && info.url.trim() !== "";
+        const cardHtml = `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-id">CARD #${idStr}</span>
+              <span class="status ${isActive ? 'active' : 'empty'}">${isActive ? '● Active' : '○ Empty'}</span>
+            </div>
+            <input type="text" id="shop_${cardKey}" placeholder="கடையின் பெயர் (Shop Name)" value="${info.shop || ''}" />
+            <input type="url" id="url_${cardKey}" placeholder="Google Review Link இங்கே பேஸ்ட் செய்யவும்" value="${info.url || ''}" />
+            <div class="btn-group">
+              <button class="btn-save" onclick="saveCard('${cardKey}')">💾 Save Link</button>
+              <button class="btn-qr" onclick="showQR('${cardKey}', '${cardLink}')">📱 QR Code</button>
+              <button class="btn-copy" onclick="copyLink('${cardLink}')">📋 NFC Link</button>
+            </div>
+          </div>
+        `;
+        container.insertAdjacentHTML('beforeend', cardHtml);
+      }
+    }
+
+    function filterCards() {
+      const text = document.getElementById('searchInput').value.trim();
+      renderCards(1, text ? 500 : 50, text);
+    }
+
+    function saveCard(cardKey) {
+      const shop = document.getElementById(`shop_${cardKey}`).value.trim();
+      const url = document.getElementById(`url_${cardKey}`).value.trim();
+      fetch(`${FIREBASE_DB_URL}/cards/${cardKey}.json`, {
+        method: 'PUT',
+        body: JSON.stringify({ shop, url })
+      }).then(() => {
+        cardsData[cardKey] = { shop, url };
+        alert(`✅ ${cardKey.toUpperCase()} வெற்றிகரமாக அப்டேட் செய்யப்பட்டது!`);
+        filterCards();
+      });
+    }
+
+    function copyLink(link) {
+      navigator.clipboard.writeText(link);
+      alert("📋 NFC லிங்க் காப்பி செய்யப்பட்டது! NFC Tools ஆப்பில் இதை Write செய்யவும்:\n" + link);
+    }
+
+    let currentQRTitle = "";
+    function showQR(cardKey, fullUrl) {
+      currentQRTitle = cardKey;
+      document.getElementById('modalTitle').innerText = cardKey.toUpperCase();
+      document.getElementById('modalUrl').innerText = fullUrl;
+      const qrDiv = document.getElementById('qrcode');
+      qrDiv.innerHTML = "";
+      new QRCode(qrDiv, { text: fullUrl, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
+      document.getElementById('qrModal').style.display = 'flex';
+    }
+
+    function downloadQR() {
+      const img = document.querySelector('#qrcode img') || document.querySelector('#qrcode canvas');
+      const link = document.createElement('a');
+      link.download = `${currentQRTitle}_QR.png`;
+      link.href = img.tagName === 'IMG' ? img.src : img.toDataURL();
+      link.click();
+    }
+
+    function closeModal(e) {
+      if (e.target.id === 'qrModal') document.getElementById('qrModal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

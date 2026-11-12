@@ -7,6 +7,9 @@
     <!-- QR Code Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
+    <!-- PWA Manifest & App Icon -->
+    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,{%22name%22:%22Smart%20NFC%20Admin%22,%22short_name%22:%22NFC%20Admin%22,%22start_url%22:%22./index.html%22,%22display%22:%22standalone%22,%22background_color%22:%22%23f4f6f9%22,%22theme_color%22:%22%231a73e8%22,%22icons%22:[%{%22src%22:%22https://cdn-icons-png.flaticon.com/512/3596/3596091.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22%}]}">
+
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 10px; color: #333; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -70,6 +73,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+    // ⚠️ உங்கள் Firebase விவரங்களை இங்கே வைக்கவும்
     const firebaseConfig = {
         apiKey: "YOUR_API_KEY",
         authDomain: "YOUR_AUTH_DOMAIN",

@@ -7,12 +7,19 @@
     <!-- QR Code Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
+    <!-- PWA Web App Manifest -->
+    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Smart%20NFC%20Admin%22%2C%22short_name%22%3A%22NFC%20Admin%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f4f6f9%22%2C%22theme_color%22%3A%22%231a73e8%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fcdn-icons-png.flaticon.com%2F512%2F3596%2F3596091.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 10px; color: #333; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #1a73e8; font-size: 20px; margin-bottom: 5px; }
         p.sub { text-align: center; color: #666; font-size: 12px; margin-bottom: 15px; }
         
+        /* Top Bar with Logout */
+        .admin-top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .btn-logout { background: #d93025; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+
         /* Login Screen */
         #login-screen { text-align: center; padding: 40px 20px; }
         #login-screen input { width: 200px; padding: 10px; font-size: 18px; text-align: center; border: 2px solid #1a73e8; border-radius: 6px; margin-bottom: 15px; letter-spacing: 3px; }
@@ -60,8 +67,13 @@
 
     <!-- 3. Admin Panel Dashboard -->
     <div id="admin-panel">
-        <h2>Smart NFC & QR Admin Panel</h2>
-        <p class="sub">Spot Link Editor & Cloud Management</p>
+        <div class="admin-top-bar">
+            <div>
+                <h2 style="text-align: left; margin:0;">Smart NFC Admin</h2>
+                <p class="sub" style="text-align: left; margin:0;">Cloud Management</p>
+            </div>
+            <button class="btn-logout" onclick="logoutAdmin()">🚪 Logout</button>
+        </div>
         <div id="cards-container"></div>
     </div>
 </div>
@@ -70,7 +82,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // 🌐 Firebase Configuration (உங்கள் பிசினஸ் ஃபைர்பேஸ் விவரங்கள் இணைக்கப்பட்டுள்ளன)
+    // 🌐 Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyA...", 
         authDomain: "smart-nfc-review.firebaseapp.com",
@@ -129,6 +141,11 @@
             alert('தவறான பாஸ்வேர்டு! மீண்டும் முயற்சிக்கவும்.');
             document.getElementById('admin-pass').value = '';
         }
+    }
+
+    window.logoutAdmin = function() {
+        sessionStorage.removeItem('nfc_admin_logged');
+        location.reload();
     }
 
     async function showAdminPanel() {

@@ -88,14 +88,14 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // 🌐 Your Real Firebase Configuration
+    // 🌐 Real Firebase Configuration for nfc-review-app-1ed32
     const firebaseConfig = {
-        apiKey: "AIzaSyDVp1h-MTfAlx6c3fA9z87...", 
+        apiKey: "AIzaSyDVp1h-MTfAlx6c3fA9z87Mb...", 
         authDomain: "nfc-review-app-1ed32.firebaseapp.com",
         projectId: "nfc-review-app-1ed32",
         storageBucket: "nfc-review-app-1ed32.appspot.com",
         messagingSenderId: "531940322054",
-        appId: "1:531940322054:web:21b94fb41..."
+        appId: "1:531940322054:web:21b94fb41c179012efcc87"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -290,7 +290,7 @@
                 await setDoc(doc(db, "nfc_cards", cardId), { name: '', link: '' }, { merge: true });
                 firestoreData[cardId] = { name: '', link: '' };
                 
-                document.getElementById('name_' + cardId).value = ''
+                document.getElementById('name_' + cardId).value = '';
                 document.getElementById('link_' + cardId).value = '';
                 
                 let badge = document.querySelector(`#box_${cardId} .card-header span:last-child`);

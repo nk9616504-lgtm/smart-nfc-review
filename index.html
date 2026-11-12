@@ -91,7 +91,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // 🌐 Firebase Configuration (உங்கள் ஒரிஜினல் புராஜெக்ட் விவரங்கள்)
+    // 🌐 Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyA...", 
         authDomain: "smart-nfc-review.firebaseapp.com",
@@ -172,8 +172,8 @@
         try {
             let querySnapshot = await getDocs(collection(db, "nfc_cards"));
             firestoreData = {};
-            querySnapshot.forEach((doc) => {
-                firestoreData[doc.id] = doc.data();
+            querySnapshot.forEach((docSnap) => {
+                firestoreData[docSnap.id] = docSnap.data();
             });
         } catch (e) {
             container.innerHTML = '<p style="color:red; text-align:center;">Firebase இணைப்பதில் சிக்கல். உங்கள் கன்சோல் இணைப்பைச் சரிபார்க்கவும்.</p>';
@@ -213,7 +213,10 @@
         for (let i = startIndex; i <= endIndex; i++) {
             let cardId = 'card' + String(i).padStart(3, '0');
             let cardData = firestoreData[cardId] || { name: '', link: '' };
-            let isActive = (cardData.name && cardData.name !== '') || (cardData.link && cardData.link !== '');
+            
+            let nameVal = cardData.name ? cardData.name : '';
+            let linkVal = cardData.link ? cardData.link : '';
+            let isActive = (nameVal.trim() !== '' || linkVal.trim() !== '');
 
             html += `
                 <div class="card-box" id="box_${cardId}">
@@ -221,8 +224,8 @@
                         <span>CARD #${String(i).padStart(3, '0')}</span>
                         <span class="${isActive ? 'badge-active' : 'badge-empty'}">${isActive ? 'Active' : 'Empty'}</span>
                     </div>
-                    <input type="text" id="name_${cardId}" placeholder="கடையின் பெயர் (Shop Name)" value="${cardData.name || ''}">
-                    <input type="text" id="link_${cardId}" placeholder="Google Review Link இங்கே பேஸ்ட் செய்யவும்" value="${cardData.link || ''}">
+                    <input type="text" id="name_${cardId}" placeholder="கடையின் பெயர் (Shop Name)" value="${nameVal}">
+                    <input type="text" id="link_${cardId}" placeholder="Google Review Link இங்கே பேஸ்ட் செய்யவும்" value="${linkVal}">
                     <div class="btn-group">
                         <button class="btn-save" onclick="saveCard('${cardId}')">💾 Save</button>
                         <button class="btn-qr" onclick="toggleQR('${cardId}')">📷 QR</button>
@@ -238,12 +241,12 @@
     }
 
     window.saveCard = async function(cardId) {
-        let name = document.getElementById('name_' + cardId).value;
-        let link = document.getElementById('link_' + cardId).value;
+        let nameField = document.getElementById('name_' + cardId).value.trim();
+        let linkField = document.getElementById('link_' + cardId).value.trim();
         
         try {
-            await setDoc(doc(db, "nfc_cards", cardId), { name: name, link: link });
-            firestoreData[cardId] = { name: name, link: link };
+            await setDoc(doc(db, "nfc_cards", cardId), { name: nameField, link: linkField }, { merge: true });
+            firestoreData[cardId] = { name: nameField, link: linkField };
             alert('Card ' + cardId + ' பாதுகாப்பாகச் சேமிக்கப்பட்டது!');
             renderCards();
         } catch (e) {
@@ -254,7 +257,7 @@
     window.clearCard = async function(cardId) {
         if(confirm('இந்த கார்டு விவரங்களை அழிக்க விரும்புகிறீர்களா?')) {
             try {
-                await setDoc(doc(db, "nfc_cards", cardId), { name: '', link: '' });
+                await setDoc(doc(db, "nfc_cards", cardId), { name: '', link: '' }, { merge: true });
                 firestoreData[cardId] = { name: '', link: '' };
                 renderCards();
             } catch (e) {

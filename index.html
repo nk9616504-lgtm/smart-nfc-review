@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart NFC & QR Admin Panel - Pro</title>
+    <title>Smart NFC & QR Admin Panel</title>
     <!-- QR Code Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
@@ -91,7 +91,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // 🌐 Firebase Configuration
+    // 🌐 Firebase Configuration (உங்கள் ஒரிஜினல் புராஜெக்ட் விவரங்கள்)
     const firebaseConfig = {
         apiKey: "AIzaSyA...", 
         authDomain: "smart-nfc-review.firebaseapp.com",
@@ -208,7 +208,7 @@
         let startIndex = (currentPage - 1) * cardsPerPage + 1;
         let endIndex = Math.min(currentPage * cardsPerPage, totalCards);
 
-        let html = `<p style="font-size:12px; color:#666; margin-bottom:10px;">Showing Cards #${String(startIndex).padStart(3, '0')} to #${String(end endIndex || endIndex).padStart(3, '0')}</p>`;
+        let html = `<p style="font-size:12px; color:#666; margin-bottom:10px;">Showing Cards #${String(startIndex).padStart(3, '0')} to #${String(endIndex).padStart(3, '0')}</p>`;
 
         for (let i = startIndex; i <= endIndex; i++) {
             let cardId = 'card' + String(i).padStart(3, '0');
